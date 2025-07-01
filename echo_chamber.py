@@ -193,20 +193,28 @@ def build_prompt_and_generate(userinput):
     print(response.choices[0].message.content)
     return response.choices[0].message.content
 
+# #pyttsx3
+# def speak(text):
+#     print(f"📢 Echo: {text}")
+#     engine = pyttsx3.init(driverName='espeak')
+#     for voice in engine.getProperty('voices'):
+#         if "de" in voice.languages or "german" in voice.name.lower():
+#             engine.setProperty('voice', voice.id)
+#             break
+#     engine.say(text)
+#     engine.runAndWait()
+
+# #ngspeak native
+# def speak(text):
+#     print(f"📢 Echo: {text}")
+#     os.system(f'espeak-ng -v de "{text}"')
+
+#gTTS
 def speak(text):
     print(f"📢 Echo: {text}")
-    engine = pyttsx3.init(driverName='espeak')
-    for voice in engine.getProperty('voices'):
-        if "de" in voice.languages or "german" in voice.name.lower():
-            engine.setProperty('voice', voice.id)
-            break
-    engine.say(text)
-    engine.runAndWait()
-
-def speak2(text):
-    print(f"📢 Echo: {text}")
-    os.system(f'espeak-ng -v de "{text}"')
-
+    tts = gTTS(text, lang='de')
+    tts.save("/tmp/tts.mp3")
+    os.system('mpg123 /tmp/tts.mp3')
 
 # === MAIN LOOP ===
 if __name__ == "__main__":
