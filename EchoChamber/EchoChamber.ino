@@ -9,54 +9,73 @@ const unsigned long switchInterval = 5000; // 5 Sekunden
 
 // Für ASCII-Animation
 int animFrame = 0;
-const char* frames[] = {
-  "................",
-  "\\\\\\\\\\\\\\\\",
-  "||||||||||||||||",
-  "████████████████",
-  "////////////////"
-};
+const char *frames[] = {
+    "................",
+    "\\\\\\\\\\\\\\\\",
+    "||||||||||||||||",
+    "████████████████",
+    "////////////////"};
 const int frameCount = sizeof(frames) / sizeof(frames[0]);
 
 // Für pulsierende Farbe
 int brightness = 100;
 int dir = 5;
 
-void setup() {
+void setup()
+{
+  Serial.begin(9600);
   lcd.begin(16, 2);
   setState(0);
 }
 
-void loop() {
+void loop()
+{
   unsigned long now = millis();
 
   // Zustandswechsel alle 5 Sekunden
-  if (now - lastSwitch > switchInterval) {
+  if (now - lastSwitch > switchInterval)
+  {
     state = (state + 1) % 2;
     setState(state);
     lastSwitch = now;
   }
 
-  if (state == 1) {
+  if (state == 1)
+  {
     // 1. Animation anzeigen
     animateAscii();
 
     // 2. Pulsierendes Rot (zwischen 100 und 255)
     brightness += dir;
-    if (brightness >= 255 || brightness <= 100) dir *= -1;
+    if (brightness >= 255 || brightness <= 100)
+      dir *= -1;
     lcd.setRGB(brightness, 0, 0);
 
     delay(150); // Animationsgeschwindigkeit
   }
+
+  // Serial control
+  if (Serial.available())
+  {
+    char c = Serial.read();
+    if (c == '0')
+      setState(0);
+    if (c == '1')
+      setState(1);
+  }
 }
 
-void setState(int newState) {
+void setState(int newState)
+{
   state = newState;
   lcd.clear();
 
-  if (state == 0) {
+  if (state == 0)
+  {
     lcd.setRGB(255, 255, 255); // Weiß – Standby
-  } else if (state == 1) {
+  }
+  else if (state == 1)
+  {
     // Startwert für Aufnahme-Modus
     animFrame = 0;
     brightness = 100;
@@ -64,7 +83,8 @@ void setState(int newState) {
   }
 }
 
-void animateAscii() {
+void animateAscii()
+{
   lcd.setCursor(0, 0);
   lcd.print(frames[animFrame % frameCount]);
 

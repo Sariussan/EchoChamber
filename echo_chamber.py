@@ -14,6 +14,7 @@ from scipy.io.wavfile import write
 import whisper
 import pyttsx3
 import shutil
+import serial
 
 # === SETUP ===
 load_dotenv()
@@ -25,6 +26,24 @@ CLAP_WAV = "sounds/applaus.wav"
 RECORD_SECONDS = 5
 THRESHOLD = 0.0008  # Adjust for your mic/noise
 USERSOUNDS_DIR = "usersounds"
+
+# Adjust the port as needed (check with 'ls /dev/ttyACM*' or 'ls /dev/ttyUSB*' on Pi)
+ARDUINO_PORT = '/dev/ttyACM0'
+ARDUINO_BAUD = 9600
+
+try:
+    arduino = serial.Serial(ARDUINO_PORT, ARDUINO_BAUD, timeout=1)
+    time.sleep(2)  # Wait for Arduino to reset
+except Exception as e:
+    print(f"Could not connect to Arduino: {e}")
+    arduino = None
+
+def set_arduino_state(state):
+    if arduino:
+        try:
+            arduino.write(str(state).encode())
+        except Exception as e:
+            print(f"Serial write error: {e}")
 
 # === BACKGROUND SOUND LOOP ===
 class BackgroundPlayer(threading.Thread):
@@ -184,9 +203,11 @@ if __name__ == "__main__":
     bg_player.start()
     try:
         while True:
+            set_arduino_state(0)  # Background mode
             bg_player.resume()
             initial_audio = wait_for_voice(bg_player)
             bg_player.pause()
+            set_arduino_state(1)  # User input mode
             userinput = record_and_transcribe(initial_audio=initial_audio)
             timestamp = int(time.time())
             usersound_path = os.path.join(USERSOUNDS_DIR, f"userinput_{timestamp}.wav")
