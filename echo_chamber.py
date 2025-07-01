@@ -18,6 +18,7 @@ import serial
 import warnings
 from vosk import Model, KaldiRecognizer
 import json
+from gtts import gTTS
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
