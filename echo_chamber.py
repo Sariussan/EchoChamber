@@ -194,6 +194,10 @@ def speak(text):
             break
     engine.say(text)
     engine.runAndWait()
+    
+def speakAlt(text):
+    print(f"📢 Echo: {text}")
+    os.system(f'espeak-ng -v de "{text}"')
 
 # === MAIN LOOP ===
 if __name__ == "__main__":
@@ -217,7 +221,8 @@ if __name__ == "__main__":
             shutil.copy("input.wav", usersound_path)
 
             response_text = build_prompt_and_generate(userinput)
-            speak(response_text)
+            # speak(response_text)
+            speakAlt(response_text)
             play_wav_file_blocking(CLAP_WAV)
             # After handling, background resumes automatically at top of loop
     except KeyboardInterrupt:
