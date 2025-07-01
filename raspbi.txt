@@ -15,6 +15,11 @@ source venv/bin/activate
 pip install numpy sounddevice scipy openai python-dotenv whisper pyttsx3 pyaudio torch pyserial
 
 # RUN THE PROJECT:
-cd /path/to/your/project
 source venv/bin/activate
 python3 echo_chamber.py
+
+# VENV MANAGEMENT
+deactivate
+source venv/bin/activate
+python3 -m venv venv --system-site-packages
+rm -rf venv

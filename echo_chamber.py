@@ -15,6 +15,9 @@ import whisper
 import pyttsx3
 import shutil
 import serial
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning)
 
 # === SETUP ===
 load_dotenv()
@@ -23,7 +26,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # === CONFIGURATION ===
 CLAP_WAV = "sounds/applaus.wav"
-RECORD_SECONDS = 5
+RECORD_SECONDS = 3
 THRESHOLD = 0.0008  # Adjust for your mic/noise
 USERSOUNDS_DIR = "usersounds"
 
@@ -153,7 +156,7 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
     write(filename, fs, audio_int16)
     print("🎧 Aufnahme beendet. Transkribiere...")
     play_clap()  # <-- Non-blocking applause starts here
-    model = whisper.load_model("base")
+    model = whisper.load_model("tiny")
     result = model.transcribe(filename)
     print(f"🗣 Erkannt: {result['text']}")
     return result['text']
