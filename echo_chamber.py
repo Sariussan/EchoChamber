@@ -30,7 +30,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 # === CONFIGURATION ===
 CLAP_WAV = "sounds/applaus.wav"
 RECORD_SECONDS = 3
-THRESHOLD = 0.0008  # Adjust for your mic/noise
+THRESHOLD = 0.00055  # Adjust for your mic/noise
 USERSOUNDS_DIR = "usersounds"
 
 # Adjust the port as needed (check with 'ls /dev/ttyACM*' or 'ls /dev/ttyUSB*' on Pi)
