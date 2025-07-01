@@ -16,6 +16,8 @@ import pyttsx3
 import shutil
 import serial
 import warnings
+from vosk import Model, KaldiRecognizer
+import json
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -137,7 +139,7 @@ def wait_for_voice(bg_player, threshold=THRESHOLD, duration=0.5, fs=44100):
             return audio  # Return the buffer that triggered detection
 
 def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial_audio=None):
-    fs = 44100
+    fs = 16000  # Vosk works best with 16kHz
     if initial_audio is not None:
         print("🎤 Aufnahme läuft (inkl. Start)...")
         remaining_duration = duration - (len(initial_audio) / fs)
@@ -151,15 +153,17 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
         print("🎤 Sprich jetzt...")
         audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
         sd.wait()
-    # Convert float32 audio to int16 PCM for compatibility
+    # Convert float32 audio to int16 PCM for Vosk
     audio_int16 = np.int16(audio * 32767)
     write(filename, fs, audio_int16)
     print("🎧 Aufnahme beendet. Transkribiere...")
-    play_clap()  # <-- Non-blocking applause starts here
-    model = whisper.load_model("tiny")
-    result = model.transcribe(filename)
-    print(f"🗣 Erkannt: {result['text']}")
-    return result['text']
+
+    rec = KaldiRecognizer(vosk_model, fs)
+    rec.AcceptWaveform(audio_int16.tobytes())
+    result = rec.Result()
+    text = json.loads(result).get("text", "")
+    print(f"🗣 Erkannt: {text}")
+    return text
 
 def build_prompt_and_generate(userinput):
     prompt = "Bestätige diese Aussage sofort, bekräftige sie enthusiastisch oder lobend in maximal 2 kurzen Sätzen: " + userinput
@@ -208,6 +212,7 @@ if __name__ == "__main__":
         sys.exit(1)
     bg_player = BackgroundPlayer(statement_files, CLAP_WAV)
     bg_player.start()
+    vosk_model = Model("vosk-model-small-de-0.15")  # adjust if needed
     try:
         while True:
             set_arduino_state(0)  # Background mode
