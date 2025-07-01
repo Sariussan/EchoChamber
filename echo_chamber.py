@@ -29,7 +29,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # === CONFIGURATION ===
 CLAP_WAV = "sounds/applaus.wav"
-RECORD_SECONDS = 3
+RECORD_SECONDS = 4
 THRESHOLD = 0.00055  # Adjust for your mic/noise
 USERSOUNDS_DIR = "usersounds"
 
@@ -213,7 +213,7 @@ def build_prompt_and_generate(userinput):
 #gTTS
 def speak(text):
     print(f"📢 Echo: {text}")
-    tts = gTTS(text, lang='de')
+    tts = gTTS(text, lang='de', slow=False) 
     tts.save("/tmp/tts.mp3")
     os.system('mpg123 /tmp/tts.mp3')
 
