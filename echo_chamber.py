@@ -14,55 +14,38 @@ import sounddevice as sd
 from scipy.io.wavfile import write
 import whisper
 import pyttsx3
+import shutil
 
 # === CONFIGURATION ===
 BACKGROUND_WAV = "sounds/Block_3_Sounds_mixdown.wav"
-CLAP_WAV = "sounds/klatschen.wav"
+CLAP_WAV = "sounds/applaus.wav"
 RECORD_SECONDS = 5
 THRESHOLD = 0.0008  # Adjust for your mic/noise
+USERSOUNDS_DIR = "usersounds"
 
 # === BACKGROUND SOUND LOOP ===
 class BackgroundPlayer(threading.Thread):
-    def __init__(self, wav_path):
+    def __init__(self, statement_files, clap_file):
         super().__init__()
-        self.wav_path = wav_path
+        self.statement_files = statement_files
+        self.clap_file = clap_file
         self._stop_event = threading.Event()
         self._pause_event = threading.Event()
         self.daemon = True
 
-    def play_from_random(self):
-        wf = wave.open(self.wav_path, 'rb')
-        p = pyaudio.PyAudio()
-        stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                        channels=wf.getnchannels(),
-                        rate=wf.getframerate(),
-                        output=True)
-        # Seek to random frame
-        total_frames = wf.getnframes()
-        random_frame = random.randint(0, total_frames - 1)
-        wf.setpos(random_frame)
-        chunk = 1024
+    def run(self):
+        idx = 0
         while not self._stop_event.is_set():
-            # Check for pause before reading/writing
             if self._pause_event.is_set():
                 time.sleep(0.1)
                 continue
-            data = wf.readframes(chunk)
-            if not data:
-                wf.rewind()
-                random_frame = random.randint(0, total_frames - 1)
-                wf.setpos(random_frame)
+            # Play statement
+            play_wav_file_blocking(self.statement_files[idx])
+            if self._stop_event.is_set() or self._pause_event.is_set():
                 continue
-            stream.write(data)
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        wf.close()
-
-    def run(self):
-        while not self._stop_event.is_set():
-            self._pause_event.clear()
-            self.play_from_random()
+            # Play clap
+            play_wav_file_blocking(self.clap_file)
+            idx = (idx + 1) % len(self.statement_files)
 
     def pause(self):
         self._pause_event.set()
@@ -74,12 +57,29 @@ class BackgroundPlayer(threading.Thread):
         self._stop_event.set()
 
 # === PLAY CLAP SOUND ===
-def play_clap():
+def play_wav_file_blocking(filepath):
     if sys.platform.startswith("win"):
         import winsound
-        winsound.PlaySound(CLAP_WAV, winsound.SND_FILENAME)
+        winsound.PlaySound(filepath, winsound.SND_FILENAME)
     else:
-        os.system(f"aplay {CLAP_WAV}")
+        os.system(f"aplay {filepath}")
+
+def play_wav_file_nonblocking(filepath):
+    if sys.platform.startswith("win"):
+        import winsound
+        threading.Thread(target=winsound.PlaySound, args=(filepath, winsound.SND_FILENAME)).start()
+    else:
+        os.system(f"aplay {filepath} &")  # Non-blocking on Linux
+
+def play_clap():
+    play_wav_file_nonblocking(CLAP_WAV)
+
+def get_random_usersound():
+    files = [os.path.join(USERSOUNDS_DIR, f) for f in os.listdir(USERSOUNDS_DIR) if f.endswith(".wav")]
+    return random.choice(files) if files else None
+
+def get_statement_files():
+    return [f"sounds/{i}.wav" for i in range(1, 7) if os.path.exists(f"sounds/{i}.wav")]
 
 # === VOICE ACTIVITY DETECTION ===
 def wait_for_voice(bg_player, threshold=THRESHOLD, duration=0.5, fs=44100):
@@ -118,11 +118,11 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
     return result['text']
 
 def build_prompt_and_generate(userinput):
-    prompt = "Benutze diesen Userinput, um eine bestätigende, aufbauende Antwort zu schreiben, welche maximal 3 sätze lang ist: " + userinput
+    prompt = "Benutze diesen Userinput, um eine bestätigende, aufbauende Antwort zu schreiben, welche maximal einen satz lang ist: " + userinput
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": "Du bist ein bestätigender, aufbauender Gesprächspartner."},
+            {"role": "system", "content": "Du bist ein bestätigender, aufbauender Gesprächspartner, der den User als Gottheit oder religiösen Führer ansieht."},
             {"role": "user", "content": prompt}
         ]
     )
@@ -141,17 +141,27 @@ def speak(text):
 
 # === MAIN LOOP ===
 if __name__ == "__main__":
-    bg_player = BackgroundPlayer(BACKGROUND_WAV)
+    os.makedirs(USERSOUNDS_DIR, exist_ok=True)
+    statement_files = get_statement_files()
+    if not statement_files:
+        print("Fehler: Keine Statement-Sounds in 'sounds/1.wav' bis 'sounds/6.wav' gefunden!")
+        sys.exit(1)
+    bg_player = BackgroundPlayer(statement_files, CLAP_WAV)
     bg_player.start()
     try:
         while True:
+            bg_player.resume()
             initial_audio = wait_for_voice(bg_player)
             bg_player.pause()
             userinput = record_and_transcribe(initial_audio=initial_audio)
+            timestamp = int(time.time())
+            usersound_path = os.path.join(USERSOUNDS_DIR, f"userinput_{timestamp}.wav")
+            shutil.copy("input.wav", usersound_path)
+
             response_text = build_prompt_and_generate(userinput)
             speak(response_text)
-            time.sleep(1)
-            bg_player.resume()
+            play_wav_file_blocking(CLAP_WAV)
+            # After handling, background resumes automatically at top of loop
     except KeyboardInterrupt:
         print("Beende Programm...")
         bg_player.stop()
