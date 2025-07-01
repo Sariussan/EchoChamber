@@ -128,13 +128,17 @@ def get_statement_files():
 # === VOICE ACTIVITY DETECTION ===
 def wait_for_voice(bg_player, threshold=THRESHOLD, duration=0.5, fs=44100):
     print("⏳ Warte auf Spracheingabe...")
+    bar_length = 40  # Length of the bar in characters
     while True:
         audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
         sd.wait()
         volume_norm = np.linalg.norm(audio) / len(audio)
-        print(f"Detected volume: {volume_norm:.5f}")
+        # Calculate bar fill
+        fill = int(min(volume_norm / threshold, 1.0) * bar_length)
+        bar = "[" + "#" * fill + "-" * (bar_length - fill) + "]"
+        print(f"\rMic Level: {bar} {volume_norm:.5f} / {threshold:.5f}", end="", flush=True)
         if volume_norm > threshold:
-            print("🎤 Sprache erkannt!")
+            print("\n🎤 Sprache erkannt!")
             bg_player.pause()
             return audio  # Return the buffer that triggered detection
 
@@ -226,7 +230,12 @@ if __name__ == "__main__":
             usersound_path = os.path.join(USERSOUNDS_DIR, f"userinput_{timestamp}.wav")
             shutil.copy("input.wav", usersound_path)
             response_text = build_prompt_and_generate(userinput)
-            speak2(response_text)
+            bg_player.pause()  
+            time.sleep(0.1)    
+            speak(response_text)  
+            time.sleep(0.1)    
+            bg_player.resume() 
+
             play_wav_file_blocking(CLAP_WAV)
             # After handling, background resumes automatically at top of loop
     except KeyboardInterrupt:
