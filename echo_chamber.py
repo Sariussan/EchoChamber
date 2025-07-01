@@ -195,7 +195,7 @@ def build_prompt_and_generate(userinput):
 
 def speak(text):
     print(f"📢 Echo: {text}")
-    engine = pyttsx3.init()
+    engine = pyttsx3.init(driverName='espeak')
     for voice in engine.getProperty('voices'):
         if "de" in voice.languages or "german" in voice.name.lower():
             engine.setProperty('voice', voice.id)
