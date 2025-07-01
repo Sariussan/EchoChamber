@@ -1,27 +1,33 @@
 import os
 from dotenv import load_dotenv
 
-# speech to text to speech
 import sounddevice as sd
 from scipy.io.wavfile import write
 import whisper
 import pyttsx3
+import sys
+
+# Cross-platform sound playing
+def play_clap():
+    if sys.platform.startswith("win"):
+        import winsound
+        winsound.PlaySound("sounds/klatschen.wav", winsound.SND_FILENAME)
+    else:
+        try:
+            import simpleaudio as sa
+            wave_obj = sa.WaveObject.from_wave_file("sounds/klatschen.wav")
+            play_obj = wave_obj.play()
+        except ImportError:
+            # Fallback to aplay if simpleaudio is not available
+            os.system("aplay sounds/klatschen.wav")
 
 # setup
 load_dotenv()
 
 # chatgpt client
 from openai import OpenAI
-client = OpenAI(api_key= os.getenv("OPENAI_API_KEY"))
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-# Background loop - Inactive loop
-
-# Passive loop
-
-# Activate on input from arduino
-
-# listen for voice & save what was said
 def record_and_transcribe(duration=5, filename="input.wav"):
     fs = 44100
     print("🎤 Sprich jetzt...")
@@ -29,19 +35,18 @@ def record_and_transcribe(duration=5, filename="input.wav"):
     sd.wait()
     write(filename, fs, audio)
     print("🎧 Aufnahme beendet. Transkribiere...")
+    play_clap()  # Play sound during transcribing
     model = whisper.load_model("base")
     result = model.transcribe(filename)
     print(f"🗣 Erkannt: {result['text']}")
     return result['text']
 
 userinput = record_and_transcribe()
-# build prompt
+
 def build_prompt_and_generate(userinput):
     prompt = "Benutze diesen Userinput, um eine bestätigende, aufbauende Antwort zu schreiben, welche den User dazu ermutigt, weiter aussagen zu treffen: " + userinput
-
-    # generate response
     response = client.chat.completions.create(
-        model="gpt-4o-mini",  # or another available model
+        model="gpt-4o-mini",
         messages=[
             {"role": "system", "content": "Du bist ein bestätigender, aufbauender Gesprächspartner."},
             {"role": "user", "content": prompt}
@@ -50,15 +55,16 @@ def build_prompt_and_generate(userinput):
     print(response.choices[0].message.content)
     return response.choices[0].message.content
 
-# play response
 def speak(text):
     print(f"📢 Echo: {text}")
     engine = pyttsx3.init()
+    # Try to set German voice
+    for voice in engine.getProperty('voices'):
+        if "de" in voice.languages or "german" in voice.name.lower():
+            engine.setProperty('voice', voice.id)
+            break
     engine.say(text)
     engine.runAndWait()
 
-# After generating the response
 response_text = build_prompt_and_generate(userinput)
 speak(response_text)
-
-# Reset to inactive state 
