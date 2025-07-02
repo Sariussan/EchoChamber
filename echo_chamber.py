@@ -19,6 +19,8 @@ import warnings
 from vosk import Model, KaldiRecognizer
 import json
 from gtts import gTTS
+from google.cloud import speech
+
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -144,7 +146,7 @@ def wait_for_voice(bg_player, threshold=THRESHOLD, duration=0.5, fs=44100):
             return audio  # Return the buffer that triggered detection
 
 def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial_audio=None):
-    fs = 16000  # Vosk works best with 16kHz
+    fs = 16000  # Google STT expects 16kHz for best results
     if initial_audio is not None:
         print("🎤 Aufnahme läuft (inkl. Start)...")
         remaining_duration = duration - (len(initial_audio) / fs)
@@ -158,15 +160,13 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
         print("🎤 Sprich jetzt...")
         audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
         sd.wait()
-    # Convert float32 audio to int16 PCM for Vosk
+    # Convert float32 audio to int16 PCM for Google STT
     audio_int16 = np.int16(audio * 32767)
     write(filename, fs, audio_int16)
     print("🎧 Aufnahme beendet. Transkribiere...")
 
-    rec = KaldiRecognizer(vosk_model, fs)
-    rec.AcceptWaveform(audio_int16.tobytes())
-    result = rec.Result()
-    text = json.loads(result).get("text", "")
+    # Use Google Speech-to-Text
+    text = transcribe_file(filename)
     print(f"🗣 Erkannt: {text}")
     return text
 
@@ -216,6 +216,21 @@ def speak(text):
     tts = gTTS(text, lang='de', slow=False) 
     tts.save("/tmp/tts.mp3")
     os.system('mpg123 /tmp/tts.mp3')
+
+def transcribe_file(speech_file):
+    client = speech.SpeechClient(api_key=os.getenv("GOOGLE_API_KEY"))
+    with open(speech_file, "rb") as audio_file:
+        content = audio_file.read()
+    audio = speech.RecognitionAudio(content=content)
+    config = speech.RecognitionConfig(
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
+        sample_rate_hertz=16000,
+        language_code="de-DE",
+    )
+    response = client.recognize(config=config, audio=audio)
+    for result in response.results:
+        print("Transcript: {}".format(result.alternatives[0].transcript))
+    return response.results[0].alternatives[0].transcript if response.results else ""
 
 # === MAIN LOOP ===
 if __name__ == "__main__":
