@@ -27,7 +27,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 # === SETUP ===
 load_dotenv()
 from openai import OpenAI
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+oai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+g_client = speech.SpeechClient()
+
 
 # === CONFIGURATION ===
 CLAP_WAV = "sounds/applaus.wav"
@@ -173,7 +175,7 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
 def build_prompt_and_generate(userinput):
     prompt = "Bestätige diese Aussage sofort, bekräftige sie enthusiastisch oder lobend in maximal 2 kurzen Sätzen: " + userinput
 
-    response = client.chat.completions.create(
+    response = oai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {
@@ -218,7 +220,6 @@ def speak(text):
     os.system('mpg123 /tmp/tts.mp3')
 
 def transcribe_file(speech_file):
-    client = speech.SpeechClient(api_key=os.getenv("GOOGLE_API_KEY"))
     with open(speech_file, "rb") as audio_file:
         content = audio_file.read()
     audio = speech.RecognitionAudio(content=content)
@@ -227,7 +228,7 @@ def transcribe_file(speech_file):
         sample_rate_hertz=16000,
         language_code="de-DE",
     )
-    response = client.recognize(config=config, audio=audio)
+    response = g_client.recognize(config=config, audio=audio)
     for result in response.results:
         print("Transcript: {}".format(result.alternatives[0].transcript))
     return response.results[0].alternatives[0].transcript if response.results else ""
