@@ -14,10 +14,8 @@ from scipy.io.wavfile import write
 import shutil
 import serial
 import warnings
-import json
 from gtts import gTTS
 from google.cloud import speech
-import collections
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -241,7 +239,6 @@ def record_until_silence(threshold=THRESHOLD, silence_duration=1.2, max_record=1
         if silent_chunks >= silence_chunks or len(audio_buffer) >= max_chunks:
             break
     audio = np.concatenate(audio_buffer, axis=0)
-    print("🎧 Aufnahme beendet. Transkribiere...")
     return audio
 
 # === MAIN LOOP ===
