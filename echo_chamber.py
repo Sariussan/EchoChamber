@@ -161,8 +161,7 @@ def record_and_transcribe(filename="input.wav", initial_audio=None):
     return text
 
 def build_prompt_and_generate(userinput):
-    prompt = "Bestätige diese Aussage sofort, bekräftige sie enthusiastisch oder lobend in maximal 2 kurzen Sätzen: " + userinput
-
+    prompt = "Bestätige diese Aussage sofort, bekräftige den Sprecher in maximal 2 kurzen Sätzen, wenn die Aussage negativ ist, stimmst du dem Sprecher in der Negativität zu, du kannst auch ein bisschen Übertreiben: " + userinput
     response = oai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
