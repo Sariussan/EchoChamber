@@ -11,15 +11,13 @@ import pyaudio
 from dotenv import load_dotenv
 import sounddevice as sd
 from scipy.io.wavfile import write
-import whisper
-import pyttsx3
 import shutil
 import serial
 import warnings
-from vosk import Model, KaldiRecognizer
 import json
 from gtts import gTTS
 from google.cloud import speech
+import collections
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -147,22 +145,14 @@ def wait_for_voice(bg_player, threshold=THRESHOLD, duration=0.5, fs=44100):
             bg_player.pause()
             return audio  # Return the buffer that triggered detection
 
-def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial_audio=None):
-    fs = 16000  # Google STT expects 16kHz for best results
+def record_and_transcribe(filename="input.wav", initial_audio=None):
+    fs = 16000
     if initial_audio is not None:
         print("🎤 Aufnahme läuft (inkl. Start)...")
-        remaining_duration = duration - (len(initial_audio) / fs)
-        if remaining_duration > 0:
-            audio_rest = sd.rec(int(remaining_duration * fs), samplerate=fs, channels=1)
-            sd.wait()
-            audio = np.concatenate((initial_audio, audio_rest), axis=0)
-        else:
-            audio = initial_audio
+        audio_rest = record_until_silence(threshold=THRESHOLD, fs=fs)
+        audio = np.concatenate((initial_audio, audio_rest), axis=0)
     else:
-        print("🎤 Sprich jetzt...")
-        audio = sd.rec(int(duration * fs), samplerate=fs, channels=1)
-        sd.wait()
-    # Convert float32 audio to int16 PCM for Google STT
+        audio = record_until_silence(threshold=THRESHOLD, fs=fs)
     audio_int16 = np.int16(audio * 32767)
     write(filename, fs, audio_int16)
     print("🎧 Aufnahme beendet. Transkribiere...")
@@ -232,6 +222,27 @@ def transcribe_file(speech_file):
     for result in response.results:
         print("Transcript: {}".format(result.alternatives[0].transcript))
     return response.results[0].alternatives[0].transcript if response.results else ""
+
+def record_until_silence(threshold=THRESHOLD, silence_duration=1.2, max_record=10, fs=16000):
+    print("🎤 Aufnahme läuft... (Sprich, Aufnahme stoppt nach Stille)")
+    silence_chunks = int(silence_duration / 0.1)
+    audio_buffer = []
+    silent_chunks = 0
+    max_chunks = int(max_record / 0.1)
+    while True:
+        chunk = sd.rec(int(0.1 * fs), samplerate=fs, channels=1)
+        sd.wait()
+        audio_buffer.append(chunk)
+        volume_norm = np.linalg.norm(chunk) / len(chunk)
+        if volume_norm < threshold:
+            silent_chunks += 1
+        else:
+            silent_chunks = 0
+        if silent_chunks >= silence_chunks or len(audio_buffer) >= max_chunks:
+            break
+    audio = np.concatenate(audio_buffer, axis=0)
+    print("🎧 Aufnahme beendet. Transkribiere...")
+    return audio
 
 # === MAIN LOOP ===
 if __name__ == "__main__":
