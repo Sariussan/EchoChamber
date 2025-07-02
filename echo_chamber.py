@@ -226,7 +226,7 @@ if __name__ == "__main__":
         sys.exit(1)
     bg_player = BackgroundPlayer(statement_files, CLAP_WAV)
     bg_player.start()
-    vosk_model = Model("vosk-model-small-de-0.15")  # adjust if needed
+    vosk_model = Model("vosk-model-de-0.21")  # adjust if needed
     try:
         while True:
             set_arduino_state(0)  # Background mode
