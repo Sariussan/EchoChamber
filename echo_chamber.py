@@ -252,13 +252,13 @@ if __name__ == "__main__":
     #vosk_model = Model("vosk-model-de-0.21")  # adjust if needed
     try:
         while True:
-            set_arduino_state(0)  # Background mode
             bg_player.resume()
             initial_audio = wait_for_voice(bg_player)
             bg_player.pause()
             set_arduino_state(1)  # User input mode
             userinput = record_and_transcribe(initial_audio=initial_audio)
             timestamp = int(time.time())
+            set_arduino_state(0)  # Background mode
             usersound_path = os.path.join(USERSOUNDS_DIR, f"userinput_{timestamp}.wav")
             shutil.copy("input.wav", usersound_path)
             response_text = build_prompt_and_generate(userinput)
