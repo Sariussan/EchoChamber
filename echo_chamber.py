@@ -173,8 +173,7 @@ def record_and_transcribe(duration=RECORD_SECONDS, filename="input.wav", initial
     return text
 
 def build_prompt_and_generate(userinput):
-    prompt = "Bestätige diese Aussage sofort, bekräftige sie enthusiastisch oder lobend in maximal 2 kurzen Sätzen: " + userinput
-
+    prompt = "Bestätige diese Aussage sofort, bekräftige den Sprecher in maximal 2 kurzen Sätzen, wenn die Aussage negativ ist, stimmst du dem Sprecher in der Negativität zu, du kannst auch ein bisschen Übertreiben: " + userinput
     response = oai_client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -245,7 +244,6 @@ if __name__ == "__main__":
     #vosk_model = Model("vosk-model-de-0.21")  # adjust if needed
     try:
         while True:
-            set_arduino_state(0)  # Background mode
             bg_player.resume()
             initial_audio = wait_for_voice(bg_player)
             bg_player.pause()
@@ -253,6 +251,7 @@ if __name__ == "__main__":
             userinput = record_and_transcribe(initial_audio=initial_audio)
             timestamp = int(time.time())
             usersound_path = os.path.join(USERSOUNDS_DIR, f"userinput_{timestamp}.wav")
+            set_arduino_state(0)  # Background mode
             shutil.copy("input.wav", usersound_path)
             response_text = build_prompt_and_generate(userinput)
             bg_player.pause()  
