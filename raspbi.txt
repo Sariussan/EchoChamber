@@ -15,7 +15,10 @@ source venv/bin/activate
 pip install numpy sounddevice scipy openai python-dotenv whisper pyttsx3 pyaudio torch pyserial
 
 # RUN THE PROJECT:
+cd development/EchoChamber
+export GOOGLE_APPLICATION_CREDENTIALS="/home/sw2/development/EchoChamber/echochamber-key.json"
 source venv/bin/activate
+alsamixer
 python3 echo_chamber.py
 
 # VENV MANAGEMENT

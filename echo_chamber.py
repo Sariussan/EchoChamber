@@ -16,6 +16,7 @@ import serial
 import warnings
 from gtts import gTTS
 from google.cloud import speech
+import tempfile
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -200,11 +201,25 @@ def build_prompt_and_generate(userinput):
 #     os.system(f'espeak-ng -v de "{text}"')
 
 #gTTS
+ANSWERS_DIR = os.path.join(os.getcwd(), "answers")
+os.makedirs(ANSWERS_DIR, exist_ok=True)
+
 def speak(text):
     print(f"📢 Echo: {text}")
-    tts = gTTS(text, lang='de', slow=False) 
-    tts.save("/tmp/tts.mp3")
-    os.system('mpg123 /tmp/tts.mp3')
+    # Save to /answers/tts_<timestamp>.mp3
+    import time
+    mp3_filename = f"tts_{int(time.time())}.mp3"
+    mp3_path = os.path.join(ANSWERS_DIR, mp3_filename)
+    tts = gTTS(text, lang='de', slow=False)
+    tts.save(mp3_path)
+    if sys.platform.startswith("win"):
+        try:
+            from playsound import playsound
+            playsound(mp3_path)
+        except ImportError:
+            print("playsound module not installed. Run 'pip install playsound'.")
+    else:
+        os.system(f'mpg123 "{mp3_path}"')
 
 def transcribe_file(speech_file):
     with open(speech_file, "rb") as audio_file:
